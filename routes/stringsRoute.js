@@ -3,6 +3,6 @@ import { string } from "../controller/stringsController.js";
 
 const stringsRouter = express.Router();
 
-stringsRouter.post("/string", string )
+stringsRouter.post("/strings", string )
 
 export default stringsRouter

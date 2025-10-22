@@ -11,7 +11,7 @@ app.use(express.json());
 
 app.get("/", (req,res) => res.send("API Working") );
 
-app.use("/api/strings", stringsRouter);
+app.use("/api", stringsRouter);
 
 app.listen(PORT, () => {
     console.log(`Server running at port ${PORT}`)
