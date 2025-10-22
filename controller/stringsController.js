@@ -55,7 +55,7 @@ try {
   }
 };
 
-export const getString = async (req, res) => {
+export const getStringByValue = async (req, res) => {
 try {
     const { string_value } = req.params;
 
@@ -71,3 +71,85 @@ try {
     res.status(500).json({ error: "An error occurred while retrieving the string" });
   }
 };
+
+export const deleteString = async (req, res) => {
+  try {
+    const { string_value } = req.params;
+
+    const foundString = stringsDB[string_value];
+
+    if (!foundString) {
+      return res.status(404).json({ error: "String does not exist in the system" });
+    }
+
+    delete stringsDB[string_value];
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred while deleting the string" });
+  }
+};
+
+export const getAllStrings = async (req, res) => {
+  try {
+    const { is_palindrome, min_length, max_length, word_count, contains_character } = req.query;
+
+    const filters = {
+      is_palindrome:
+        is_palindrome?.toLowerCase() === "true"
+          ? true
+          : is_palindrome?.toLowerCase() === "false"
+          ? false
+          : null,
+      min_length: min_length ? parseInt(min_length, 10) : null,
+      max_length: max_length ? parseInt(max_length, 10) : null,
+      word_count: word_count ? parseInt(word_count, 10) : null,
+      contains_character: contains_character || null,
+    };
+
+    const invalid =
+      (is_palindrome && !["true", "false"].includes(is_palindrome.toLowerCase())) ||
+      (min_length && isNaN(filters.min_length)) ||
+      (max_length && isNaN(filters.max_length)) ||
+      (word_count && isNaN(filters.word_count));
+
+    if (invalid) {
+      return res.status(400).json({ error: "Invalid query parameter values or types" });
+    }
+
+    const allStrings = Object.values(stringsDB);
+
+    const filtered = allStrings.filter((item) => applyFilters(item, filters));
+
+    res.status(200).json({
+      data: filtered,
+      count: filtered.length,
+      filters_applied: Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== null)
+      ),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred while fetching strings" });
+  }
+};
+
+function applyFilters(item, filters) {
+  const props = item.properties;
+  const {
+    is_palindrome,
+    min_length,
+    max_length,
+    word_count,
+    contains_character,
+  } = filters;
+
+  if (is_palindrome !== null && props.is_palindrome !== is_palindrome) return false;
+  if (min_length !== null && props.length < min_length) return false;
+  if (max_length !== null && props.length > max_length) return false;
+  if (word_count !== null && props.word_count !== word_count) return false;
+  if (contains_character && !item.value.includes(contains_character)) return false;
+
+  return true;
+}
