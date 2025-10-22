@@ -1,11 +1,21 @@
 import crypto from "crypto";
 
+const stringsDB = {};
+
 export const string = async (req, res) => {
 try {
     const { value } = req.body;
 
-    if (!value || typeof value !== "string") {
-      return res.status(422).json({ error: "Please provide a valid string" });
+     if (!req.body || !("value" in req.body)) {
+      return res.status(400).json({ error: "Invalid request body or missing 'value' field" });
+    }
+
+    if (typeof value !== "string") {
+      return res.status(422).json({ error: "Invalid data type for 'value' (must be a string)" });
+    }
+
+    if (stringsDB[value]) {
+      return res.status(409).json({ error: "String already exists in the system" });
     }
 
     const sha256_hash = crypto.createHash("sha256").update(value).digest("hex");
@@ -23,20 +33,41 @@ try {
       character_frequency_map[char] = (character_frequency_map[char] || 0) + 1;
     }
 
-    res.json({
+     const analyzedData = {
       id: sha256_hash,
-      value: value,
+      value,
       properties: {
-      length,
-      is_palindrome,
-      unique_characters,
-      word_count,
-      sha256_hash,
-      character_frequency_map,
+        length,
+        is_palindrome,
+        unique_characters,
+        word_count,
+        sha256_hash,
+        character_frequency_map,
       },
-      createdAt: new Date().toISOString(),
-    });
+      created_at: new Date().toISOString(),
+    };
+
+     stringsDB[value] = analyzedData;
+
+     res.status(201).json(analyzedData);
   } catch (error) {
     res.status(500).json({ error: "An error occurred while analyzing string" });
+  }
+};
+
+export const getString = async (req, res) => {
+try {
+    const { string_value } = req.params;
+
+    const foundString = stringsDB[string_value];
+
+    if (!foundString) {
+      return res.status(404).json({ error: "String does not exist in the system" });
+    }
+
+    res.status(200).json(foundString);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred while retrieving the string" });
   }
 };
